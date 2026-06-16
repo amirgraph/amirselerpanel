@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل نمایندگی</title>
+<style>
+  :root {
+    --bg: #080810;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7C5CFC;
+    --accent2: #5eead4;
+    --text: #f0f0ff;
+    --text-muted: rgba(240,240,255,0.45);
+    --danger: #ff4d6d;
+    --success: #2dd4bf;
+    --warning: #fbbf24;
+    --radius: 14px;
+    --glass: blur(20px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed; top: -20%; right: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(124,92,252,0.1) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Auth */
+  #auth-screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); z-index: 100;
+  }
+  .auth-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px 36px;
+    width: 100%; max-width: 380px; text-align: center;
+  }
+  .brand-logo { font-size: 3rem; margin-bottom: 12px; }
+  .auth-card h1 { font-size: 1.4rem; margin-bottom: 6px; }
+  .auth-card p { color: var(--text-muted); margin-bottom: 28px; font-size: .85rem; }
+
+  /* Layout */
+  #app { display: none; min-height: 100vh; position: relative; z-index: 1; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(8,8,16,0.85);
+    backdrop-filter: var(--glass);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
+  .topbar-logo-placeholder {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .topbar-name { font-weight: 700; font-size: .95rem; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .balance-pill {
+    background: rgba(124,92,252,0.15);
+    border: 1px solid rgba(124,92,252,0.3);
+    border-radius: 20px; padding: 5px 14px;
+    font-size: .82rem; color: var(--accent); font-weight: 600;
+  }
+
+  /* Bottom nav (mobile) */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,20,0.95);
+    backdrop-filter: var(--glass);
+    border-top: 1px solid var(--border);
+    display: none;
+    z-index: 50;
+  }
+  .bottom-nav-items {
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 8px 0 12px;
+  }
+  .bn-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px; border-radius: 10px;
+    cursor: pointer; font-size: .68rem; color: var(--text-muted);
+    transition: color .2s;
+  }
+  .bn-item .bn-icon { font-size: 1.3rem; }
+  .bn-item.active { color: var(--accent); }
+
+  /* Sidebar (desktop) */
+  .sidebar {
+    position: fixed; top: 60px; right: 0;
+    width: 220px; height: calc(100vh - 60px);
+    background: rgba(255,255,255,0.02);
+    border-left: 1px solid var(--border);
+    padding: 20px 12px;
+    display: flex; flex-direction: column;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 9px;
+    cursor: pointer; color: var(--text-muted); font-size: .86rem;
+    transition: all .2s; margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+  .nav-item.active { background: rgba(124,92,252,0.15); color: var(--accent); }
+
+  .main {
+    margin-right: 220px;
+    padding: 24px; min-height: calc(100vh - 60px);
+  }
+
+  /* Pages */
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .page-header h2 { font-size: 1.3rem; font-weight: 700; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    backdrop-filter: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .stat-label { font-size: .75rem; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value { font-size: 1.7rem; font-weight: 700; }
+  .stat-sub { font-size: .7rem; color: var(--text-muted); margin-top: 3px; }
+  .stat-card.c-accent .stat-value { color: var(--accent); }
+  .stat-card.c-success .stat-value { color: var(--success); }
+  .stat-card.c-warning .stat-value { color: var(--warning); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    backdrop-filter: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+  }
+  .table-header h3 { font-size: .95rem; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: right; padding: 11px 14px; font-size: .73rem; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; font-size: .83rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-hover); }
+
+  /* Form */
+  input, select, textarea {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 12px; color: var(--text); font-size: .86rem;
+    outline: none; transition: border-color .2s; font-family: inherit;
+  }
+  input:focus, select:focus { border-color: var(--accent); background: rgba(124,92,252,0.08); }
+  select option { background: #1a1a2e; }
+  label { display: block; font-size: .75rem; color: var(--text-muted); margin-bottom: 5px; }
+  .form-group { margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 8px 16px; border-radius: 9px; font-size: .83rem;
+    font-weight: 600; cursor: pointer; border: none; transition: all .2s; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #6d4ff0; }
+  .btn-secondary { background: var(--surface-hover); border: 1px solid var(--border); color: var(--text); }
+  .btn-danger { background: rgba(255,77,109,0.12); color: var(--danger); border: 1px solid rgba(255,77,109,0.25); }
+  .btn-success { background: rgba(45,212,191,0.12); color: var(--success); border: 1px solid rgba(45,212,191,0.25); }
+  .btn-warning { background: rgba(251,191,36,0.12); color: var(--warning); border: 1px solid rgba(251,191,36,0.25); }
+  .btn-sm { padding: 4px 10px; font-size: .75rem; border-radius: 6px; }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .7rem; font-weight: 600; }
+  .badge-active { background: rgba(45,212,191,0.15); color: var(--success); }
+  .badge-inactive { background: rgba(255,77,109,0.15); color: var(--danger); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+    z-index: 200; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #0f0f1e; border: 1px solid var(--border);
+    border-radius: 20px; padding: 26px; width: 100%; max-width: 480px;
+    max-height: 90vh; overflow-y: auto; position: relative;
+  }
+  .modal h3 { font-size: 1rem; margin-bottom: 18px; }
+  .modal-close { position: absolute; top: 14px; left: 14px; background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+
+  /* Progress */
+  .progress-bar { height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s; }
+
+  /* Sub link */
+  .sub-box {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 14px; font-size: .8rem;
+    font-family: monospace; word-break: break-all; color: var(--accent2);
+    cursor: pointer; transition: background .2s; direction: ltr; text-align: left;
+  }
+  .sub-box:hover { background: rgba(255,255,255,0.07); }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,20,40,.95); backdrop-filter: var(--glass);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 22px; font-size: .85rem;
+    z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+  #toast.success { border-color: var(--success); color: var(--success); }
+  #toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .bottom-nav { display: block; }
+    .main { margin-right: 0; padding: 16px; padding-bottom: 80px; }
+    .form-row { grid-template-columns: 1fr; }
+    th:nth-child(n+4), td:nth-child(n+4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="brand-logo" id="auth-logo">🌐</div>
+    <h1 id="auth-title">پنل نمایندگی</h1>
+    <p>ورود به حساب کاربری</p>
+    <div class="form-group">
+      <label>نام کاربری</label>
+      <input id="login-user" type="text" placeholder="username" dir="ltr">
+    </div>
+    <div class="form-group">
+      <label>رمز عبور</label>
+      <input id="login-pass" type="password" placeholder="••••••••" dir="ltr">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:11px" onclick="doLogin()">ورود</button>
+    <p id="login-err" style="color:var(--danger);margin-top:10px;font-size:.83rem"></p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo-placeholder" id="tb-logo">🌐</div>
+      <span class="topbar-name" id="tb-name">پنل نمایندگی</span>
+    </div>
+    <div class="topbar-right">
+      <span class="balance-pill" id="tb-balance">💰 ...</span>
+      <button class="btn btn-secondary btn-sm" onclick="logout()">خروج</button>
+    </div>
+  </div>
+
+  <!-- Sidebar (desktop) -->
+  <div class="sidebar">
+    <div class="nav-item active" onclick="showPage('dashboard',this)">
+      <span>📊</span> داشبورد
+    </div>
+    <div class="nav-item" onclick="showPage('clients',this)">
+      <span>👤</span> کاربران
+    </div>
+    <div class="nav-item" onclick="showPage('transactions',this)">
+      <span>💳</span> تراکنش‌ها
+    </div>
+    <div class="nav-item" onclick="showPage('brand',this)">
+      <span>🎨</span> برند من
+    </div>
+  </div>
+
+  <!-- Bottom nav (mobile) -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-items">
+      <div class="bn-item active" onclick="showPage('dashboard',this)"><span class="bn-icon">📊</span>داشبورد</div>
+      <div class="bn-item" onclick="showPage('clients',this)"><span class="bn-icon">👤</span>کاربران</div>
+      <div class="bn-item" onclick="showPage('transactions',this)"><span class="bn-icon">💳</span>تراکنش</div>
+      <div class="bn-item" onclick="showPage('brand',this)"><span class="bn-icon">🎨</span>برند</div>
+    </div>
+  </div>
+
+  <main class="main">
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h2>داشبورد</h2>
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">🔄</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card c-accent"><div class="stat-label">موجودی کیف</div><div class="stat-value" id="ds-balance">-</div><div class="stat-sub">تومان</div></div>
+        <div class="stat-card c-success"><div class="stat-label">ترافیک باقی‌مانده</div><div class="stat-value" id="ds-remaining">-</div><div class="stat-sub">گیگابایت</div></div>
+        <div class="stat-card"><div class="stat-label">کاربران فعال</div><div class="stat-value" id="ds-clients">-</div><div class="stat-sub" id="ds-max">از -</div></div>
+        <div class="stat-card c-warning"><div class="stat-label">منقضی شدنی</div><div class="stat-value" id="ds-expiring">-</div><div class="stat-sub">ظرف ۳ روز</div></div>
+      </div>
+      <!-- Traffic bar -->
+      <div class="table-wrap" style="padding:18px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:.82rem;color:var(--text-muted)">مصرف ترافیک</span>
+          <span style="font-size:.82rem" id="ds-traffic-label">-</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="ds-traffic-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Clients -->
+    <div class="page" id="page-clients">
+      <div class="page-header">
+        <h2>کاربران</h2>
+        <button class="btn btn-primary" onclick="openAddClient()">➕ کاربر جدید</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>نام</th>
+              <th>مصرف</th>
+              <th>انقضا</th>
+              <th>IP</th>
+              <th>وضعیت</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="clients-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="page" id="page-transactions">
+      <div class="page-header"><h2>تراکنش‌ها</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>نوع</th><th>مبلغ</th><th>توضیح</th><th>تاریخ</th></tr></thead>
+          <tbody id="txn-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Brand -->
+    <div class="page" id="page-brand">
+      <div class="page-header"><h2>برند من</h2></div>
+      <div class="table-wrap" style="padding:24px">
+        <div class="form-row">
+          <div class="form-group">
+            <label>نام برند</label>
+            <input id="brand-name" placeholder="VPN Pro">
+          </div>
+          <div class="form-group">
+            <label>لوگو (URL آیکون)</label>
+            <input id="brand-logo" placeholder="https://..." dir="ltr">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>رنگ اصلی</label>
+            <input id="brand-color" type="color" value="#7C5CFC" style="height:42px;padding:4px">
+          </div>
+          <div class="form-group">
+            <label>رنگ پس‌زمینه</label>
+            <input id="brand-bg" type="color" value="#080810" style="height:42px;padding:4px">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveBrand()">💾 ذخیره برند</button>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:8px">لینک سابسکریپشن کاربران با برند شما ساخته می‌شه</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Client Modal -->
+<div class="modal-overlay" id="modal-client">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-client')">✕</button>
+    <h3 id="modal-client-title">کاربر جدید</h3>
+    <input type="hidden" id="c-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>نام کاربر</label>
+        <input id="c-name" placeholder="علی">
+      </div>
+      <div class="form-group">
+        <label>اینباند</label>
+        <select id="c-inbound"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>حجم (GB)</label>
+        <input id="c-traffic" type="number" value="30" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>محدودیت IP</label>
+        <input id="c-ip" type="number" value="1" min="1" max="10" dir="ltr">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>تاریخ انقضا</label>
+      <input id="c-expires" type="datetime-local" dir="ltr">
+    </div>
+    <div class="form-group">
+      <label>آیدی تلگرام (اختیاری)</label>
+      <input id="c-telegram" placeholder="123456789" dir="ltr">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-client')">انصراف</button>
+      <button class="btn btn-primary" onclick="saveClient()">ایجاد کاربر</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client detail/sub modal -->
+<div class="modal-overlay" id="modal-sub">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('modal-sub')">✕</button>
+    <h3 id="sub-username">اطلاعات کاربر</h3>
+    <div style="margin-bottom:14px">
+      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">لینک سابسکریپشن</div>
+      <div class="sub-box" id="sub-link" onclick="copySubLink()">در حال بارگذاری...</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:5px">برای کپی کلیک کن</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-success btn-sm" onclick="copySubLink()">📋 کپی لینک</button>
+      <button class="btn btn-warning btn-sm" id="sub-toggle-btn" onclick="toggleCurrentClient()">⏸ غیرفعال</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrentClient()">🗑️ حذف</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('reseller_token');
+let profile = null;
+let currentClientId = null;
+let currentClientActive = false;
+
+if (token) initApp();
+
+async function doLogin() {
+  const u = document.getElementById('login-user').value;
+  const p = document.getElementById('login-pass').value;
+  try {
+    const r = await post('/auth/reseller/login', { username: u, password: p });
+    if (r.success) {
+      token = r.token;
+      localStorage.setItem('reseller_token', token);
+      applyBrand(r.reseller);
+      initApp();
+    } else {
+      document.getElementById('login-err').textContent = r.message;
+    }
+  } catch { document.getElementById('login-err').textContent = 'خطا در اتصال'; }
+}
+
+function applyBrand(rs) {
+  if (!rs) return;
+  if (rs.brand_name) {
+    document.getElementById('auth-title').textContent = rs.brand_name;
+    document.getElementById('tb-name').textContent = rs.brand_name;
+    document.title = rs.brand_name;
+  }
+  if (rs.brand_color) {
+    document.documentElement.style.setProperty('--accent', rs.brand_color);
+  }
+  if (rs.brand_bg_color) {
+    document.documentElement.style.setProperty('--bg', rs.brand_bg_color);
+  }
+}
+
+async function initApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await loadProfile();
+  loadDashboard();
+  loadInbounds();
+}
+
+async function loadProfile() {
+  const r = await get('/reseller/profile');
+  if (!r.success) return;
+  profile = r.data;
+  applyBrand(profile);
+  document.getElementById('tb-balance').textContent = '💰 ' + (profile.balance || 0).toLocaleString() + ' ت';
+  // Set brand fields
+  document.getElementById('brand-name').value = profile.brand_name || '';
+  document.getElementById('brand-logo').value = profile.brand_logo || '';
+  document.getElementById('brand-color').value = profile.brand_color || '#7C5CFC';
+  document.getElementById('brand-bg').value = profile.brand_bg_color || '#080810';
+}
+
+function logout() {
+  localStorage.removeItem('reseller_token');
+  location.reload();
+}
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .bn-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  const loaders = { dashboard: loadDashboard, clients: loadClients, transactions: loadTransactions };
+  if (loaders[name]) loaders[name]();
+}
+
+// API helpers
+async function get(path) {
+  const r = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } });
+  if (r.status === 401) { logout(); return {}; }
+  return r.json();
+}
+async function post(path, body) {
+  const r = await fetch(API + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function put(path, body) {
+  const r = await fetch(API + path, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function del(path) {
+  const r = await fetch(API + path, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+  return r.json();
+}
+
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+function fmt(gb) { return typeof gb === 'number' ? gb.toFixed(1) + ' GB' : '-'; }
+function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString('fa-IR'); }
+
+async function loadDashboard() {
+  const r = await get('/reseller/stats');
+  if (!r.success) return;
+  const d = r.data;
+  document.getElementById('ds-balance').textContent = (d.balance||0).toLocaleString();
+  document.getElementById('ds-remaining').textContent = d.traffic_remaining_gb?.toFixed(1) || '0';
+  document.getElementById('ds-clients').textContent = d.active_clients || 0;
+  document.getElementById('ds-max').textContent = 'از ' + (d.max_clients || 0);
+  document.getElementById('ds-expiring').textContent = d.expiring_soon || 0;
+  const pct = d.traffic_limit_gb > 0 ? Math.min(100, (d.traffic_used_gb / d.traffic_limit_gb) * 100) : 0;
+  document.getElementById('ds-traffic-bar').style.width = pct + '%';
+  document.getElementById('ds-traffic-label').textContent = `${fmt(d.traffic_used_gb)} از ${fmt(d.traffic_limit_gb)}`;
+}
+
+let inbounds = [];
+async function loadInbounds() {
+  const r = await get('/reseller/inbounds');
+  if (!r.success) return;
+  inbounds = r.data;
+  const sel = document.getElementById('c-inbound');
+  sel.innerHTML = inbounds.map(ib => `<option value="${ib.id}">${ib.remark || ib.tag} (${ib.protocol}:${ib.port})</option>`).join('');
+}
+
+async function loadClients() {
+  const r = await get('/reseller/clients');
+  if (!r.success) return;
+  document.getElementById('clients-tbody').innerHTML = r.data.map(c => `
+    <tr>
+      <td>
+        <strong>${c.username}</strong>
+        <br><small style="color:var(--text-muted);font-size:.7rem" dir="ltr">${c.email}</small>
+      </td>
+      <td>
+        ${fmt(c.traffic_used_gb)} / ${fmt(c.traffic_limit_gb)}
+        <div class="progress-bar" style="margin-top:4px;width:80px">
+          <div class="progress-fill" style="width:${c.traffic_limit_gb>0?Math.min(100,(c.traffic_used_gb/c.traffic_limit_gb)*100):0}%"></div>
+        </div>
+      </td>
+      <td>${fmtDate(c.expires_at)}</td>
+      <td>${c.ip_limit}</td>
+      <td><span class="badge ${c.is_active ? 'badge-active':'badge-inactive'}">${c.is_active?'فعال':'غیرفعال'}</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openSubModal(${c.id},'${c.username}','${c.xui_uuid}',${c.is_active})">🔗</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddClient() {
+  document.getElementById('c-id').value = '';
+  document.getElementById('modal-client-title').textContent = 'کاربر جدید';
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-traffic').value = 30;
+  document.getElementById('c-ip').value = 1;
+  document.getElementById('c-expires').value = '';
+  document.getElementById('c-telegram').value = '';
+  openModal('modal-client');
+}
+
+async function saveClient() {
+  const body = {
+    username: document.getElementById('c-name').value,
+    inbound_id: parseInt(document.getElementById('c-inbound').value),
+    traffic_limit_gb: parseFloat(document.getElementById('c-traffic').value),
+    ip_limit: parseInt(document.getElementById('c-ip').value),
+    expires_at: document.getElementById('c-expires').value || null,
+    telegram_id: document.getElementById('c-telegram').value || null,
+  };
+  if (!body.username || !body.inbound_id) return toast('نام و اینباند الزامی است', 'error');
+  const r = await post('/reseller/clients', body);
+  if (r.success) {
+    toast('✅ کاربر ساخته شد');
+    closeModal('modal-client');
+    loadClients();
+    loadDashboard();
+    loadProfile();
+  } else toast(r.message || 'خطا', 'error');
+}
+
+function openSubModal(id, username, uuid, isActive) {
+  currentClientId = id;
+  currentClientActive = !!isActive;
+  document.getElementById('sub-username').textContent = username;
+  const subUrl = `${location.origin}/sub/${uuid}`;
+  document.getElementById('sub-link').textContent = subUrl;
+  document.getElementById('sub-toggle-btn').textContent = isActive ? '⏸ غیرفعال‌کردن' : '▶️ فعال‌کردن';
+  document.getElementById('sub-toggle-btn').className = isActive ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm';
+  openModal('modal-sub');
+}
+
+function copySubLink() {
+  const text = document.getElementById('sub-link').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('✅ کپی شد'));
+}
+
+async function toggleCurrentClient() {
+  const r = await post(`/reseller/clients/${currentClientId}/toggle`, {});
+  if (r.success) {
+    toast(r.is_active ? '✅ فعال شد' : '⏸ غیرفعال شد');
+    closeModal('modal-sub');
+    loadClients();
+  } else toast(r.message, 'error');
+}
+
+async function deleteCurrentClient() {
+  if (!confirm('این کاربر حذف شود؟ حجم باقی‌مانده برمی‌گردد.')) return;
+  const r = await del(`/reseller/clients/${currentClientId}`);
+  if (r.success) {
+    toast('✅ حذف شد');
+    closeModal('modal-sub');
+    loadClients();
+    loadDashboard();
+    loadProfile();
+  } else toast(r.message, 'error');
+}
+
+async function loadTransactions() {
+  const r = await get('/reseller/transactions');
+  if (!r.success) return;
+  document.getElementById('txn-tbody').innerHTML = r.data.map(t => `
+    <tr>
+      <td><span class="badge ${t.type==='credit'?'badge-active':'badge-inactive'}">${t.type==='credit'?'واریز':'برداشت'}</span></td>
+      <td>${t.amount.toLocaleString()} ت</td>
+      <td>${t.description||'-'}</td>
+      <td>${fmtDate(t.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+async function saveBrand() {
+  const r = await put('/reseller/brand', {
+    brand_name: document.getElementById('brand-name').value,
+    brand_color: document.getElementById('brand-color').value,
+    brand_bg_color: document.getElementById('brand-bg').value,
+    brand_logo: document.getElementById('brand-logo').value,
+  });
+  if (r.success) { toast('✅ برند ذخیره شد'); applyBrand({ brand_name: document.getElementById('brand-name').value, brand_color: document.getElementById('brand-color').value, brand_bg_color: document.getElementById('brand-bg').value }); }
+  else toast(r.message, 'error');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none') doLogin();
+});
+</script>
+</body>
+</html>
